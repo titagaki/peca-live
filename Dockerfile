@@ -2,6 +2,7 @@ FROM ruby:2.7.1
 
 RUN apt-get update -qq && apt-get install -y --no-install-recommends \
     build-essential \
+    libpq-dev \
     libxml2-dev \
     libxslt1-dev \
     curl \
