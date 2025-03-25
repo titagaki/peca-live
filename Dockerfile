@@ -1,6 +1,6 @@
 FROM ruby:2.7.1-slim
 
-ENV BUNDLER_VERSION=2.4.22
+ENV BUNDLER_VERSION 2.4.22
 
 RUN apt-get update -qq && apt-get install -y --no-install-recommends \
     build-essential \
