@@ -1,6 +1,6 @@
 FROM ruby:2.7.1-slim
 
-ENV BUNDLER_VERSION 2.4.22
+ENV BUNDLER_VERSION=2.4.22
 
 RUN apt-get update -qq && apt-get install -y --no-install-recommends \
     build-essential \
@@ -23,8 +23,7 @@ RUN curl -fsSL https://deb.nodesource.com/setup_18.x | bash -\
 WORKDIR /app
 
 COPY Gemfile Gemfile.lock ./
-RUN gem install bundler -v "2.4.22"
-RUN bundle install
+RUN gem install bundler:$BUNDLER_VERSION && bundle install
 
 COPY . .
 
