@@ -2,8 +2,10 @@ require 'open-uri'
 
 class UserIconsController < ApplicationController
   def show
-    response = fetch_icon
-    send_data response.body, type: response.content_type, disposition: 'inline'
+    redirect_to '/images/mouneyou.png'
+    # TODO: ツイッターアイコンが取得できなくなってたので、無効化
+    # response = fetch_icon
+    # send_data response.body, type: response.content_type, disposition: 'inline'
   end
 
   private
