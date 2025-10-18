@@ -142,10 +142,12 @@ class Channel {
   }
 
   get ypIconUrl() {
-    const jpnknId = this.jpnknId
-    if (jpnknId) {
-      return `/user_icons/${jpnknId}`
-    } else if (this.isSp) {
+    // TODO: アイコン取得ができてなさそうなので無効化
+    // const jpnknId = this.jpnknId
+    // if (jpnknId) {
+    //   return `/user_icons/${jpnknId}`
+    // } else if (this.isSp) {
+    if (this.isSp) {
       return '/images/yp-sp.png'
     } else if (this.isTp) {
       return '/images/yp-tp.png'
