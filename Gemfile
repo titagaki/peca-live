@@ -13,8 +13,9 @@ gem 'nkf',        '~> 0.2'
 
 gem 'benchmark', require: false
 gem 'ostruct',   require: false
+gem 'logger' # Ruby3.5から標準添付から外れる。Rails6.1 + concurrent-ruby 1.3.5以降では config/boot.rb で先に require する必要がある
 
-gem "concurrent-ruby", "1.3.4" # logが読み込めない対策
+gem "concurrent-ruby", ">= 1.3.7" # 1.3.4〜1.3.6 に脆弱性あり
 
 # Use sqlite3 as the database for Active Record
 # gem 'sqlite3', '~> 1.4', group: :development
