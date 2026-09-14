@@ -40,7 +40,7 @@ $ docker compose run --rm web bundle exec rake ridgepole:apply  # 初回のみ: 
 $ docker compose up -d
 ```
 
-- `web`: http://localhost:3000
+- `web`: http://localhost/ (`WEB_PORT` で変更可)
 - `peercast-mi`: 7144 を公開 (ブラウザが直接つなぐので HTTP のまま)。`PEERCAST_TIP` にはこのポートの公開アドレスを設定する
 - `scheduler`: 10 分ごとに配信履歴の記録と配信開始通知を叩く
 

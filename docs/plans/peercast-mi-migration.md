@@ -166,7 +166,27 @@ services:
 - `PEERCAST_TIP` の公開ポート 7144 は **HTTP のまま** 公開する必要がある (ブラウザからの直接接続。HTTPS 化しない現状の理由と同じ)
 - peercast-mi の `config.toml` は volume でマウント (`CMD ["-config", "/config/config.toml"]`)
 
-### 7. 定期実行の置き換え
+### 7. リバースプロキシは置かない
+
+`web` は puma が直接 80 番 (`WEB_PORT`) で受ける。compose 内に nginx は入れない。
+
+- TLS 終端ができない (ブラウザが HTTP の peercast-mi に直接つなぐため HTTPS 化できない) ので、プロキシの最大の利点がない
+- 静的ファイルは `RAILS_SERVE_STATIC_FILES` で puma が配信する。この規模なら十分
+- 動画は 7144 (peercast-mi) に直接行くのでプロキシを通らない
+
+配信者 IP の判定はプロキシの有無に依存しないよう `request.remote_ip` にした ([spec/api.md クライアント IP の決定](../spec/api.md))。
+
+#### 前段にプロキシを置く場合の注意
+
+同じホストで別サービス (peercast-0yp の Caddy など) が 80 番を使っていて振り分けが必要な場合は、compose 内ではなく **ホスト側のプロキシ** で `peca.live` → `web` に流す。そのとき:
+
+- **HTTP のみで受ける。** Caddy は自動 HTTPS が既定なので `http://peca.live` と明示する。HTTPS で受けて `X-Forwarded-Proto: https` を渡すと、Rails が `request.url` を `https://` と認識し、`ApplicationController#ensure_domain` の `https → http` リダイレクトが無限ループする
+- `X-Forwarded-For` を付ける (nginx なら `proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;`、Caddy は既定で付く)。プロキシが private アドレス (Docker ネットワーク / 同一ホスト) から `web` につなぐ限り `remote_ip` が正しく解釈する
+- Cloudflare などグローバル IP のプロキシを挟む場合は `config.action_dispatch.trusted_proxies` にその IP レンジを追加する
+- `Host` ヘッダを通す (`proxy_set_header Host $host;`)。`ensure_domain` が `request.url` でドメインを判定するため
+- `origin/add-dockerfile` ブランチにあった `docker/nginx/nginx.conf` (Host / X-Real-IP / X-Forwarded-For / X-Forwarded-Proto を付ける最小構成) は参考になるが、`X-Forwarded-Proto` は上記の理由で外す
+
+### 8. 定期実行の置き換え
 
 `GET /api/v1/channels/record_history` と `GET /api/v1/channels/notification_broadcasting` は Heroku Scheduler で 10 分ごとに叩く前提 ([../spec/scheduled-jobs.md](../spec/scheduled-jobs.md))。Docker では次のいずれか。
 
@@ -183,6 +203,7 @@ services:
 - [x] 環境変数を `PEERCAST_RPC_URL` / `PEERCAST_TIP` に分離、フロントのポート固定 (8144) を撤去
 - [x] `Dockerfile` / `docker-compose.yml` / `docker/peercast-mi/config.toml` / `docker/scheduler/run.sh`
 - [x] 仕様書を実装に合わせて更新
+- [x] 配信者 IP の判定を `request.remote_ip` に変更 (プロキシ無しでの `X-Forwarded-For` 偽装対策)。`web` は 80 番を直接公開
 - [ ] 本番の PeerCastStation で YP の「チャンネル一覧 URI」を確認し、`YELLOW_PAGES` に設定。実データで `YellowPage` を確認
 - [ ] ローカルで peercast-mi と結合テスト (視聴・再接続・掲載トグル・通知)
 - [ ] 本番を Docker 構成へ切り替え。`peca.live:7144` を peercast-mi に向ける

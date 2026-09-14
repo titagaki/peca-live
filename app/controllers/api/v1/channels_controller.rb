@@ -34,17 +34,18 @@ class Api::V1::ChannelsController < ApplicationController
   end
 
   def broadcasting
-    ip = forwarded_for.presence || request.ip
+    # 配信者の IP。前段にプロキシがある場合は private アドレス経由の X-Forwarded-For だけを信頼する (ActionDispatch::RemoteIp)
+    ip = request.remote_ip
     channels = ChannelHistory.broadcast_from(ip)
     render json: channels.map { |channel| { channelId: channel.stream_id, name: channel.name, private: PrivateChannel.secret?(channel.name) } }
   end
 
   def check_port
-    ip = params[:host].presence || forwarded_for.presence || request.ip
+    ip = params[:host].presence || request.remote_ip
     port_no = params[:port_no].presence || "7144"
     result = PeerCast.port_opened?(ip, port_no)
 
-    render json: { result: result, check_ip: ip, check_port: port_no, request_ip: request.ip, request_remote_ip: request.remote_ip, forward: request.env["HTTP_X_FORWARDED_FOR"], remote_addr: request.remote_addr, env_remote_addr: request.env['REMOTE_ADDR']}
+    render json: { result: result, check_ip: ip, check_port: port_no, request_remote_ip: request.remote_ip, forward: request.env["HTTP_X_FORWARDED_FOR"], remote_addr: request.remote_addr }
   end
 
   def bump
@@ -80,12 +81,6 @@ class Api::V1::ChannelsController < ApplicationController
 
   def set_private_channel_names
     @private_channel_names = PrivateChannel.secret.pluck(:name)
-  end
-
-  def forwarded_for
-    forwarded = request.env['HTTP_X_FORWARDED_FOR']
-    return if forwarded.blank?
-    forwarded.split(",").first
   end
 
   def get_channels

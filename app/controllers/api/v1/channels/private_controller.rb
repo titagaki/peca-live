@@ -1,7 +1,7 @@
 class Api::V1::Channels::PrivateController < ApplicationController
   # api/v1/channels/private/しっかりシュールｃｈ
   def show
-    ip = forwarded_for.presence || request.ip
+    ip = request.remote_ip # 配信者の IP (プロキシ経由でも偽装されない。channels_controller#broadcasting と同じ)
     head :forbidden and return unless ChannelHistory.where(name: params[:channel_name]).broadcast_from(ip).exists?
 
     channel = PrivateChannel.find_by(name: params[:channel_name])
@@ -17,13 +17,5 @@ class Api::V1::Channels::PrivateController < ApplicationController
     end
 
     head :ok
-  end
-
-  private
-
-  def forwarded_for
-    forwarded = request.env['HTTP_X_FORWARDED_FOR']
-    return if forwarded.blank?
-    forwarded.split(",").first
   end
 end

@@ -32,7 +32,7 @@ YP の `index.txt` から取得した一覧 (`YellowPage.fetch_channels`) から
 ### 一覧取得: `GET /api/v1/channels/broadcasting`
 
 ```
-ip = X-Forwarded-For の先頭 || request.ip
+ip = request.remote_ip                     # プロキシ経由でも偽装不可 (api.md「クライアント IP の決定」)
 ChannelHistory.broadcast_from(ip)          # tracker LIKE 'ip%' OR creator LIKE 'ip%'
 → [{ channelId, name, private: PrivateChannel.secret?(name) }]
 ```

@@ -1,8 +1,9 @@
 services:
+  # Rails。puma が直接受ける (前段に nginx は置かない。プロキシを置く場合は docs/plans/peercast-mi-migration.md を参照)
   web:
     build: .
     ports:
-      - "3000:3000"
+      - "${WEB_PORT:-80}:3000"
     env_file: .env
     environment:
       DATABASE_URL: postgres://postgres:${POSTGRES_PASSWORD:-postgres}@db:5432/pecalive

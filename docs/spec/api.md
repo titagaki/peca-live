@@ -27,8 +27,17 @@ API も例外ではない。開発環境 (`localhost`) では何も置換され�
 
 ### クライアント IP の決定
 
-`Api::V1::ChannelsController` と `Api::V1::Channels::PrivateController` は `forwarded_for.presence || request.ip` を「配信者の IP」として使う。
-`forwarded_for` は `HTTP_X_FORWARDED_FOR` をカンマで分割した先頭要素（Heroku のルータ経由を想定）。
+`Api::V1::ChannelsController#broadcasting` / `#check_port` と `Api::V1::Channels::PrivateController#show` は **`request.remote_ip`** を「配信者の IP」として使う。
+
+`request.remote_ip` (`ActionDispatch::RemoteIp`) は `X-Forwarded-For` を解釈するが、**信頼するのは private アドレス (10/8, 172.16/12, 192.168/16, 127/8, fc00::/7 など) からのホップだけ**。
+
+| 構成 | 得られる IP |
+| --- | --- |
+| `web` を直接公開 | 実際の接続元。クライアントが `X-Forwarded-For` を付けても送信元がグローバル IP なので無視される |
+| 同一ホスト / Docker ネットワーク上のプロキシ経由 | プロキシは private なので信頼され、`X-Forwarded-For` のクライアント IP になる |
+| Cloudflare など外部プロキシ経由 | プロキシの IP がグローバルなので信頼されず、プロキシの IP になる。`config.action_dispatch.trusted_proxies` の設定が必要 |
+
+以前は `X-Forwarded-For` の先頭を無条件に使っていた (Heroku ルータ前提)。プロキシ無しで公開するとヘッダを偽装して他の配信者の掲載設定を操作できたため、`remote_ip` に変更した。
 
 ### レスポンス
 
@@ -136,14 +145,14 @@ API も例外ではない。開発環境 (`localhost`) では何も置換され�
 
 | パラメータ | 既定 |
 | --- | --- |
-| `host` | リクエスト元 IP |
+| `host` | `request.remote_ip` |
 | `port_no` | `"7144"` |
 
 `PeerCast.port_opened?(host, port_no)`（PCP `helo` を送って `oleh` が返るか。3 秒タイムアウト）。デバッグ情報つきで返す:
 
 ```json
 { "result": true, "check_ip": "...", "check_port": "7144",
-  "request_ip": "...", "request_remote_ip": "...", "forward": "...", "remote_addr": "...", "env_remote_addr": "..." }
+  "request_remote_ip": "...", "forward": "<X-Forwarded-For>", "remote_addr": "..." }
 ```
 
 フロントからは使っていない。

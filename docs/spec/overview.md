@@ -136,7 +136,8 @@ public/images/                     ロゴ・YPアイコン等の静的画像
 
 - Docker Compose で `web` (Rails) / `db` (PostgreSQL) / `peercast-mi` / `scheduler` を起動する（`docker-compose.yml`、`Dockerfile`、`docker/`）。手順は `README.md`。
   - `peercast-mi` はリポジトリ外のクローンをビルドする（`PEERCAST_MI_CONTEXT`、既定 `../go/peercast-mi`）。設定は `docker/peercast-mi/config.toml`
-  - `web` は 3000、`peercast-mi` は 7144 を公開する。7144 はブラウザが直接開くので HTTP のまま外部に出す
+  - `web` は 80 (`WEB_PORT`)、`peercast-mi` は 7144 を公開する。どちらも HTTP のまま外部に出す (7144 はブラウザが直接開く)
+  - `web` の前段に nginx 等は置かない (puma が直接受ける)。ホスト側のプロキシ配下に置く場合の注意は `docs/plans/peercast-mi-migration.md`
 - `ApplicationController#ensure_domain` の `herokuapp.com` → `peca.live` リダイレクトは Heroku 時代の名残で、そのまま残っている。
 - スキーマ変更は `rake ridgepole:apply_dry_run` → `rake ridgepole:apply`（`config/database.for.heroku.ridgepole.yml`。`DATABASE_URL` を使う）。
 - Rails 側には cron 相当の仕組みがなく、[scheduled-jobs.md](scheduled-jobs.md) に記載の GET エンドポイントを `scheduler` コンテナが 10 分ごとに叩く。
