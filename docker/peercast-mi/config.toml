@@ -1,0 +1,31 @@
+# peca-live 用 peercast-mi 設定 (視聴用リレーノード)
+peercast_port = 7144
+rtmp_port     = 1935            # peca-live では使わない。compose では公開しない
+
+log_level = "info"
+
+# ブラウザ (グローバル IP) からの /stream/<id>.flv?tip= でリレーを開始させる
+relay_request_from = "any"
+
+# 露出対策: 同時に保持するリレーチャンネル数と、直下の視聴者数
+max_relay_channels = 16
+max_listeners      = 0          # 0 = 無制限。必要なら制限する
+max_relays         = 4
+max_relays_total   = 16
+
+# 視聴者のいないリレーを自動削除するまでの分数
+channel_cleanup_minutes = 20
+
+# 非 localhost (= Rails コンテナ) からの JSON-RPC に必須。
+# PEERCAST_BASIC_TOKEN = base64("admin_user:admin_pass") を Rails 側に設定する
+admin_user = "admin"
+admin_pass = "changeme"
+
+# tip なしの /stream/ 要求で tracker を探す先 (peca-live は常に tip を付けるのでフォールバック)
+[[yp]]
+name = "SP"
+addr = "pcp://bayonet.ddo.jp:7146/"
+
+[[yp]]
+name = "TP"
+addr = "pcp://temp.orz.hm:7144/"

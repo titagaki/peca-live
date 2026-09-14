@@ -7,7 +7,7 @@ Rails のレイアウトが `application.js`（UJS / Turbolinks / ActionCable �
 
 1. `DOMContentLoaded` で Redux store を作り `<App />` をマウント。
 2. `App` の `useEffect`（初回のみ）:
-   1. `localStorage` の `pecaHost` / `pecaPortNo` から視聴先 PeerCast を復元（無ければ `PeerCast.defaultHost` / `8144`）。
+   1. `localStorage` の `pecaHost` / `pecaPortNo` から視聴先 PeerCast を復元（無ければ `PeerCast.defaultHost` / `defaultPortNo`）。
    2. `/api/v1/channels` と `/api/v1/favorites` を取得。
    3. `setInterval` で **10 秒ごと** に `/api/v1/channels` を再取得（コメントには「1 分」とあるが実装は 10 秒）。
    4. `firebase.auth().onAuthStateChanged` を登録 → ログイン時は ID トークンで `POST /api/v1/accounts`、完了後にチャンネル再取得（`favorited` 反映）、Redux `user` を更新。
@@ -51,7 +51,7 @@ Rails のレイアウトが `application.js`（UJS / Turbolinks / ActionCable �
 | --- | --- | --- | --- | --- |
 | `channels` | `ChannelInterface[]` | `[]` | `updateChannels(dispatch)`: `/api/v1/channels` を取得しソートして set | `useSelectorChannels()` → `Channel[]` |
 | `favorites` | `FavoriteInterface[]` | `[]` | `updateFavorites(dispatch)`: `/api/v1/favorites` | `useSelectorFavorites()` → `Favorite[]`（未使用） |
-| `peercast` | `{ host, portNo }` | `defaultHost`, `8144` | `updatePeerCast(dispatch, host, portNo)` | `useSelectorPeerCast()` → `PeerCast` |
+| `peercast` | `{ host, portNo }` | `defaultHost`, `defaultPortNo` | `updatePeerCast(dispatch, host, portNo)` | `useSelectorPeerCast()` → `PeerCast` |
 | `user` | `{ uid, displayName, photoURL }` | すべて `null` | `updateUser(...)`, `signOutUser(dispatch)` | `useSelectorUser()` → `User`（`isLogin = !!uid`） |
 | `dialog` | `{ currentAboutPage }` | `localStorage.aboutVersion === '3'` なら `-1`、それ以外 `0` | `openAboutPage(dispatch)` (=0), `setAboutPage(dispatch, n)` | `useSelectorDialog()` → `Dialog` |
 
@@ -89,8 +89,7 @@ API の JSON をラップする getter 群。主要な派生プロパティ:
 
 ### `PeerCast` (`types/PeerCast.ts`)
 
-- `defaultHost`: `<meta name="peercast-tip">` の `host` 部。なければ `150.9.163.29`。
-- `defaultPortNo`: `8144`。
+- `defaultHost` / `defaultPortNo`: `<meta name="peercast-tip">` の `host:port` を分解したもの。meta が無い・`:` を含まない場合は `150.9.163.29:8144`。
 - `tip`: `host:portNo`。
 
 ### `Dialog` (`types/Dialog.ts`)
@@ -176,7 +175,7 @@ flv.js による再生とカスタムコントロール。
 
 - 「接続先のPeerCast」: IP とポート番号のテキストフィールド。
   - 保存: Redux `peercast` を更新し `localStorage.pecaHost` / `pecaPortNo` に保存（ダイアログを閉じてから）。
-  - デフォルトに戻す: `defaultHost` / `8144` に戻し `localStorage` を削除。
+  - デフォルトに戻す: `defaultHost` / `defaultPortNo` に戻し `localStorage` を削除。
   - ポートは `parseInt`。数値以外を入れると `NaN`。
 - 「配信の掲載」: 案内文「掲載しない場合は、配信のチャンネル詳細に「__」（アンダーバー２つ）を含めてください。」の下に、自 IP からの配信履歴ごとにスイッチ「『<name>』を掲載する」。
   - `checked = !channel.private`。変更で `GET /api/v1/channels/private/<name>` を投げ、`isPrivate` を反転させて `useEffect` を再実行 → 一覧を再取得。

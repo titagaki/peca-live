@@ -1,6 +1,6 @@
 # peercast-mi への移行と Docker 化
 
-- 状態: 検討中
+- 状態: 実装中 (ブランチ `feature/peercast-mi`)
 - 日付: 2026-09-14
 - 関連: [../spec/peercast-integration.md](../spec/peercast-integration.md), [../spec/overview.md](../spec/overview.md)
 
@@ -176,21 +176,23 @@ services:
 
 `Rails.cache` がファイルストアのままだと `web` を複数レプリカにしたとき通知が重複する。単一コンテナのうちは問題ない。
 
-## 作業手順 (案)
+## 作業手順
 
-1. 本番の PeerCastStation で YP の「チャンネル一覧URI」を確認し、`index.txt` の実データを保存する
-2. `lib/yellow_page.rb` を実装 (保存した実データでテスト)。`get_channels` を差し替え、**PeerCastStation のまま** 本番で動作確認
-3. `bump` → `stopChannel`、`/api/v1/peercast` 削除、環境変数分離、フロントのポート固定撤去
-4. Rails の `Dockerfile` / `docker-compose.yml` を作成し、ローカルで peercast-mi と結合テスト (視聴・再接続・掲載トグル・通知)
-5. 本番を Docker 構成へ切り替え。DNS の `peca.live:7144` を peercast-mi に向ける
-6. 仕様書 (`docs/spec/peercast-integration.md`, `overview.md`, `api.md`, `scheduled-jobs.md`) を実装に合わせて更新
+- [x] `lib/yellow_page.rb` を実装 (`spec/lib/yellow_page_spec.rb`)。`get_channels` を差し替え。YP は `YELLOW_PAGES` 環境変数で指定
+- [x] `bump` → `stopChannel`、`/api/v1/peercast` 削除、`JsonRpc` を `Net::HTTP` 化
+- [x] 環境変数を `PEERCAST_RPC_URL` / `PEERCAST_TIP` に分離、フロントのポート固定 (8144) を撤去
+- [x] `Dockerfile` / `docker-compose.yml` / `docker/peercast-mi/config.toml` / `docker/scheduler/run.sh`
+- [x] 仕様書を実装に合わせて更新
+- [ ] 本番の PeerCastStation で YP の「チャンネル一覧 URI」を確認し、`YELLOW_PAGES` に設定。実データで `YellowPage` を確認
+- [ ] ローカルで peercast-mi と結合テスト (視聴・再接続・掲載トグル・通知)
+- [ ] 本番を Docker 構成へ切り替え。`peca.live:7144` を peercast-mi に向ける
 
 ## 要確認事項
 
 - [x] `index.txt` の項目並び — peercast-0yp の仕様書と PeerCastStation の実装で確認済み (19 項目)
 - [ ] 現行 PeerCastStation の YP 設定にある「チャンネル一覧 URI」の値
 - [ ] SP の `index.txt` がアクセス元制限されているか (開発機からは `login.html` へ 302)
-- [ ] `listeners` / `relays` / `bitrate` が空・非数値の行の扱い (`ChannelHistory` の NOT NULL 制約)
+- [ ] `listeners` / `relays` / `bitrate` が空・非数値の行の扱い — 実装は PeerCastStation と同じく `nil` にしている。`ChannelHistory.record_channels` はその行で例外になる (現状の YP では起きない想定)
 - [ ] `PEERCAST_TIP` の公開ポートを 7144 にするか、現行の 8144 を維持するか (ユーザーの `localStorage` に旧ポートが残っている場合の扱い)
 - [ ] `stopChannel` による再接続で、同一チャンネルの他の視聴者に与える影響を許容するか
 - [ ] Docker 化後のホスティング先 (Heroku Container / VPS / 自宅サーバ) と、定期実行の方式

@@ -4,19 +4,24 @@ export type PeerCastInterface = {
 }
 
 class PeerCast {
-  // 接続先PeerCastのIPは環境変数 PEERCAST_TIP を meta タグ経由で受け取る。
-  // meta が無い/読めない場合のみ、下記のフォールバックIPを使う。
-  // ※ポートは PEERCAST_TIP のポート(config)とは用途が異なるため共有せず、固定値を使う。
-  private static fallbackHost = '150.9.163.29' // shule.peca.live
+  // 接続先PeerCastは環境変数 PEERCAST_TIP ("host:port") を meta タグ経由で受け取る。
+  // 視聴 (/stream/) と JSON-RPC は同じポートなので、ポートもそのまま使う。
+  // meta が無い/読めない場合のみ、下記のフォールバックを使う。
+  private static fallbackTip = '150.9.163.29:8144' // shule.peca.live (旧 PeerCastStation)
 
-  static get defaultHost() {
+  private static get defaultTip(): string {
     const meta = document.querySelector('meta[name="peercast-tip"]')
-    // PEERCAST_TIP は "host:port" 形式。ホスト部分だけ利用する。
-    const host = meta?.getAttribute('content')?.split(':')[0]
-    return host || PeerCast.fallbackHost
+    const tip = meta?.getAttribute('content')
+    return tip && tip.includes(':') ? tip : PeerCast.fallbackTip
   }
 
-  static defaultPortNo = 8144
+  static get defaultHost(): string {
+    return PeerCast.defaultTip.split(':')[0]
+  }
+
+  static get defaultPortNo(): number {
+    return parseInt(PeerCast.defaultTip.split(':')[1])
+  }
 
   constructor(public json: PeerCastInterface) {}
 

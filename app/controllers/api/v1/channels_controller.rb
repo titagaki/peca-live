@@ -48,7 +48,8 @@ class Api::V1::ChannelsController < ApplicationController
   end
 
   def bump
-    json_rpc_api.bump_channel(params[:streamId]) if params[:streamId].present?
+    # 再接続。ノードのリレーチャンネルを止めると、直後のリロードで /stream/?tip= が新しくリレーを張る
+    json_rpc_api.stop_channel(params[:streamId]) if params[:streamId].present?
   end
 
   private
@@ -89,7 +90,7 @@ class Api::V1::ChannelsController < ApplicationController
 
   def get_channels
     Rails.cache.fetch('Api::V1::ChannelsController/get_channels', expires_in: 1.minute) do
-      json_rpc_api.update_yp_channels
+      YellowPage.fetch_channels
     end
   end
 

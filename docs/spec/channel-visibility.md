@@ -2,7 +2,7 @@
 
 ## 一覧に載る条件 (`Api::V1::ChannelsController#visible_channel?`)
 
-`updateYPChannels` の結果から、次のいずれかに該当するチャンネルを **除外** する。
+YP の `index.txt` から取得した一覧 (`YellowPage.fetch_channels`) から、次のいずれかに該当するチャンネルを **除外** する。
 
 | 条件 | 判定 |
 | --- | --- |

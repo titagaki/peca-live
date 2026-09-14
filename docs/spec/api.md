@@ -8,7 +8,7 @@
 
 すべてのリクエストで、リクエスト URL を次の順で書き換えた URL と一致しなければそこへ `redirect_to` する。
 
-1. `https://` → `http://` （PeerCastStation と HTTP 通信するため HTTPS を使わない）
+1. `https://` → `http://` （ブラウザが PeerCast ノードと HTTP 通信するため HTTPS を使わない）
 2. `peca-live.herokuapp.com` → `peca.live`
 3. `www.peca.live` → `peca.live`
 
@@ -62,7 +62,6 @@ API も例外ではない。開発環境 (`localhost`) では何も置換され�
 | メソッド | パス | 認証 | 説明 |
 | --- | --- | --- | --- |
 | GET | `/api/v1/csrf_token` | - | CSRF トークン取得 |
-| GET | `/api/v1/peercast` | - | PeerCastStation の状態 |
 | POST | `/api/v1/accounts` | Bearer | Firebase ID トークンでログイン |
 | GET | `/api/v1/accounts/sign_out` | - | ログアウト |
 | GET | `/api/v1/channels` | 任意 | 配信中チャンネル一覧 |
@@ -70,7 +69,7 @@ API も例外ではない。開発環境 (`localhost`) では何も置換され�
 | GET | `/api/v1/channels/record_history` | - | 【定期実行】配信履歴の記録 |
 | GET | `/api/v1/channels/broadcasting` | - | 自分 (IP) が配信した履歴 |
 | GET | `/api/v1/channels/check_port` | - | ポート開放チェック |
-| GET | `/api/v1/channels/bump?streamId=` | - | Bump |
+| GET | `/api/v1/channels/bump?streamId=` | - | 再接続 (ノードの `stopChannel`) |
 | GET | `/api/v1/channels/private/:channel_name` | IP | 掲載/非掲載トグル |
 | DELETE | `/api/v1/channels/private/:channel_name` | - | ルートは存在するがアクション未実装 (→ 500) |
 | GET | `/api/v1/favorites` | 任意 | お気に入り一覧 |
@@ -93,16 +92,6 @@ API も例外ではない。開発環境 (`localhost`) では何も置換され�
 - レスポンスヘッダ `X-CSRF-Token: <form_authenticity_token>`、ボディなし (200)。
 - 現在のフロントは使っていない（`<meta name="csrf-token">` を使用）。
 
-### GET `/api/v1/peercast`
-
-PeerCastStation の `getStatus` の一部。1 分キャッシュ (`api/v1/peercast/show`)。
-
-```json
-{ "host": "150.9.163.29", "portNo": 7144, "uptime": 12345 }
-```
-
-`host` / `portNo` は `globalRelayEndPoint` の `[host, port]`。
-
 ### POST `/api/v1/accounts`
 
 - ヘッダ `Authorization: Bearer <Firebase ID token>`、`X-CSRF-TOKEN` 必須。
@@ -118,9 +107,9 @@ PeerCastStation の `getStatus` の一部。1 分キャッシュ (`api/v1/peerca
 
 配信中のチャンネル一覧。フロントの主データ源。
 
-- `fetch_channels`（1 分キャッシュ）: `updateYPChannels` の結果から YP 自身のエントリと非掲載チャンネルを除いたもの（ルールは [channel-visibility.md](channel-visibility.md)）。
+- `fetch_channels`（1 分キャッシュ）: `YellowPage.fetch_channels`（各 YP の `index.txt`）の結果から YP 自身のエントリと非掲載チャンネルを除いたもの（ルールは [channel-visibility.md](channel-visibility.md)）。
 - ログイン中の場合、各要素に `favorited: true/false` を付与する。**未ログイン、またはお気に入りが 0 件のときは `favorited` キー自体が付かない**。
-- レスポンスは PeerCastStation の `updateYPChannels` の各要素をそのまま返す（キー一覧は [peercast-integration.md](peercast-integration.md)）。
+- レスポンスは `YellowPage` が整形したハッシュをそのまま返す（キー一覧は [peercast-integration.md](peercast-integration.md)）。
 - キャッシュされた配列オブジェクトに `favorited` を書き込むため、ファイルキャッシュでは影響しないが、メモリキャッシュを使う場合はキャッシュ内容が汚染される。
 
 ### GET `/api/v1/channels/notification_broadcasting`
@@ -161,7 +150,7 @@ PeerCastStation の `getStatus` の一部。1 分キャッシュ (`api/v1/peerca
 
 ### GET `/api/v1/channels/bump?streamId=`
 
-`streamId` があれば PeerCastStation の `bumpChannel` を実行。204。フロントの「再接続(Bump)」ボタンから呼ばれ、直後にページをリロードする。
+`streamId` があればノードの `stopChannel` を実行してリレーチャンネルを消す。ノードにそのチャンネルが無ければ何もしない。204。フロントの「再接続(Bump)」ボタンから呼ばれ、直後にページをリロードすることで `/stream/?tip=` から新しいリレーが張られる。同じチャンネルを見ている他の視聴者も一度切れる。
 
 ### GET `/api/v1/channels/private/:channel_name`
 

@@ -1,0 +1,61 @@
+services:
+  web:
+    build: .
+    ports:
+      - "3000:3000"
+    env_file: .env
+    environment:
+      DATABASE_URL: postgres://postgres:${POSTGRES_PASSWORD:-postgres}@db:5432/pecalive
+      # Rails → peercast-mi は compose の内部ネットワークで接続する
+      PEERCAST_RPC_URL: http://peercast-mi:7144/api/1
+    depends_on:
+      db:
+        condition: service_healthy
+      peercast-mi:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "curl", "-fs", "-o", "/dev/null", "http://localhost:3000/api/v1/csrf_token"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+      start_period: 20s
+    restart: unless-stopped
+
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: pecalive
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+
+  # 視聴用 PeerCast ノード。ブラウザが直接 7144 に接続するので公開する (HTTP のまま)
+  peercast-mi:
+    build: ${PEERCAST_MI_CONTEXT:-../go/peercast-mi}
+    ports:
+      - "7144:7144"
+    volumes:
+      - ./docker/peercast-mi:/config:ro
+    restart: unless-stopped
+
+  # 定期実行 (配信履歴の記録・配信開始通知)
+  scheduler:
+    image: curlimages/curl:8.10.1
+    entrypoint: ["/bin/sh", "/run.sh"]
+    volumes:
+      - ./docker/scheduler/run.sh:/run.sh:ro
+    environment:
+      WEB_URL: http://web:3000
+    depends_on:
+      web:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  pgdata:
